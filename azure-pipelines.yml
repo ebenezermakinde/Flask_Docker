@@ -1,17 +1,17 @@
 # Docker
 # Build a Docker image 
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
+ 
 trigger:
 - master
-
+ 
 resources:
 - repo: self
-
+ 
 variables:
   tag: '$(Build.BuildId)'
-  imageName: 'ebenezermakinde/pipeline-flash-image'
-
+  imageName: 'seunnuga93/pipelines-flask-docker'
+  
 stages:
 - stage: Build
   displayName: Build image
@@ -19,8 +19,17 @@ stages:
   - job: Build
     displayName: Build
     pool:
-      vmImage: 'ubuntu-latest'
+      vmImage: 'vs2017-win2016'
     steps:
+ 
+    - task: AzurePowerShell@5
+      inputs:
+        azureSubscription: 'Visual Studio Enterprise(ec593a48-6125-4a71-984e-3a8ced1a59ac)'
+        ScriptType: 'InlineScript'
+        #Inline: 'Get-AzADServicePrincipal'
+        Inline: 'Get-AzResources'
+        preferredAzurePowerShellVersion: '5.1.1'
+
     - task: Docker@2
       displayName: Build an image
       inputs:
@@ -29,8 +38,25 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/app/Dockerfile'
         tags: |
           $(tag)
+    
     - task: Docker@2
       inputs:
-        containerRegistry: 'DockerHubConnection'
+        containerRegistry: 'nugadocker'
         repository: $(imageName)
         command: 'push'
+ 
+    - task: CopyFiles@2
+      inputs:
+        Contents: |
+          Contents: |
+           **/manifests/deployment.yaml
+           **/manifests/service.yaml
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'deploy'
+        publishLocation: 'Container'
+    
+
